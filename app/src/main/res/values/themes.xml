@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.PushupBird" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">@color/ink</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="colorPrimary">@color/terracotta</item>
+        <item name="colorOnPrimary">@color/ink</item>
+        <item name="colorSecondary">@color/brass</item>
+        <item name="colorOnSecondary">@color/ink</item>
+        <item name="colorSecondaryContainer">@color/selected_fill</item>
+        <item name="colorOnSecondaryContainer">@color/cream</item>
+        <item name="colorSurface">@color/ink</item>
+        <item name="colorOnSurface">@color/cream</item>
+        <item name="colorOutline">@color/cream_dim</item>
+        <item name="android:textColor">@color/cream</item>
+    </style>
+
+    <style name="Widget.PushupBird.Primary" parent="Widget.Material3.Button">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="cornerRadius">16dp</item>
+    </style>
+
+    <style name="Widget.PushupBird.Secondary" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:textColor">@color/cream</item>
+        <item name="strokeColor">@color/cream_dim</item>
+        <item name="cornerRadius">16dp</item>
+    </style>
+
+    <style name="Widget.PushupBird.Travel" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:minHeight">44dp</item>
+        <item name="android:textColor">@color/cream</item>
+        <item name="strokeColor">@color/cream_dim</item>
+    </style>
+
+    <style name="Widget.PushupBird.Text" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textColor">@color/cream</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+</resources>

@@ -45,8 +45,6 @@ class MainActivity : AppCompatActivity() {
     private var tone: ToneGenerator? = null
     private var lastFaceAt = 0L
     private var stickyError: String? = null
-    private var statusOverride: String? = null
-    private var statusOverrideUntil = 0L
     private var pauseMessage: String = ""
     private var newBestThisRun = false
     private var syncingTravel = false
@@ -117,8 +115,6 @@ class MainActivity : AppCompatActivity() {
         binding.startButton.setOnClickListener { onStartClicked() }
         binding.retryButton.setOnClickListener { onRetryClicked() }
         binding.resumeButton.setOnClickListener { onResumeClicked() }
-        binding.recalibrateButton.setOnClickListener { onRecalibrateClicked() }
-        binding.resetHeightButton.setOnClickListener { onResetHeight() }
         wireTravel(binding.travelToggle)
         wireTravel(binding.overTravelToggle)
         syncTravel(signal.halfRange)
@@ -130,7 +126,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         onBackPressedDispatcher.addCallback(this, backCallback)
-        pauseMessage = getString(R.string.pause_reset)
+        pauseMessage = getString(R.string.pause_left)
         if (!hasCameraPermission()) {
             if (settings.cameraAsked) showPermissionDenied() else showPermissionRationale()
         }
@@ -210,14 +206,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onStartClicked() {
-        if (!captureHeight()) return
         if (!world.start()) return
         newBestThisRun = false
         renderChrome()
     }
 
     private fun onRetryClicked() {
-        if (!captureHeight()) return
         if (!world.start()) return
         newBestThisRun = false
         renderChrome()
@@ -228,27 +222,6 @@ class MainActivity : AppCompatActivity() {
         renderChrome()
     }
 
-    private fun onRecalibrateClicked() {
-        if (!captureHeight()) return
-        pauseMessage = getString(R.string.pause_reset)
-        renderChrome()
-    }
-
-    private fun onResetHeight() {
-        if (!captureHeight()) return
-        world.pause()
-        pauseMessage = getString(R.string.pause_reset)
-        renderChrome()
-    }
-
-    private fun captureHeight(): Boolean {
-        if (!faceVisible() || !signal.calibrate()) {
-            flash(getString(R.string.need_face))
-            return false
-        }
-        return true
-    }
-
     private fun renderChrome() {
         val granted = hasCameraPermission()
         binding.permissionScreen.isVisible = !granted
@@ -256,7 +229,6 @@ class MainActivity : AppCompatActivity() {
         binding.readyGroup.isVisible = state == RunState.READY
         binding.pausedPanel.isVisible = state == RunState.PAUSED
         binding.gameOverPanel.isVisible = state == RunState.DEAD
-        binding.resetHeightButton.isVisible = state == RunState.PLAYING
         if (state == RunState.PAUSED) binding.pauseBody.text = pauseMessage
         if (state == RunState.READY) binding.bestReady.text = bestLabel()
         if (state == RunState.DEAD) {
@@ -281,19 +253,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun currentMessage(): String? {
         stickyError?.let { return it }
-        val now = SystemClock.uptimeMillis()
-        if (statusOverride != null && now < statusOverrideUntil) return statusOverride
         val missing = !faceVisible()
         return when (world.state) {
             RunState.PLAYING -> if (missing) getString(R.string.face_lost) else null
             else -> if (missing) getString(R.string.looking_for_face) else null
         }
-    }
-
-    private fun flash(text: String) {
-        statusOverride = text
-        statusOverrideUntil = SystemClock.uptimeMillis() + 2400L
-        updateStatus()
     }
 
     private fun faceVisible(): Boolean {

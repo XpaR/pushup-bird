@@ -158,16 +158,6 @@
             </LinearLayout>
         </FrameLayout>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/reset_height_button"
-            style="@style/Widget.PushupBird.Text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top|start"
-            android:layout_marginStart="4dp"
-            android:text="@string/reset_height"
-            android:visibility="gone" />
-
         <LinearLayout
             android:id="@+id/paused_panel"
             android:layout_width="match_parent"
@@ -199,7 +189,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="@string/pause_reset"
+                android:text="@string/pause_left"
                 android:textColor="@color/cream_dim"
                 android:textSize="15sp" />
 
@@ -208,12 +198,6 @@
                 style="@style/Widget.PushupBird.Primary"
                 android:layout_marginTop="16dp"
                 android:text="@string/resume" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/recalibrate_button"
-                style="@style/Widget.PushupBird.Secondary"
-                android:layout_marginTop="8dp"
-                android:text="@string/set_again" />
         </LinearLayout>
 
         <LinearLayout

@@ -108,12 +108,12 @@ class GameWorld(
         if (width < 2f || height < 2f) {
             return Tick(scored = false, died = false, state = state, score = score)
         }
-        applyControl(control)
+        val dt = dtRaw.coerceIn(0f, MAX_STEP_SEC)
+        applyControl(control, dt)
         if (state != RunState.PLAYING) {
             return Tick(scored = false, died = false, state = state, score = score)
         }
 
-        val dt = dtRaw.coerceIn(0f, MAX_STEP_SEC)
         val speed = speedPxPerSec()
         for (pipe in pipes) {
             pipe.x -= speed * dt
@@ -174,10 +174,18 @@ class GameWorld(
         )
     }
 
-    private fun applyControl(control: Float?) {
+    /**
+     * ±1 reaches the ceiling and the mat. The bird eases toward that target
+     * so one noisy frame cannot throw it across the playfield.
+     */
+    private fun applyControl(control: Float?, dt: Float) {
         val value = control ?: return
-        val halfTravel = (matTop() - ceilingThickness) / 2f + birdRadius * 0.5f
-        birdY = centerY() + value.coerceIn(-1f, 1f) * halfTravel
+        val span = (matTop() - ceilingThickness).coerceAtLeast(1f)
+        val reach = span / 2f + birdRadius * HIT_SCALE * 0.2f
+        val target = centerY() + value.coerceIn(-1f, 1f) * reach
+        val maxDelta = span * MAX_VERTICAL_FRACTION_PER_SEC * dt
+        if (maxDelta <= 0f) return
+        birdY += (target - birdY).coerceIn(-maxDelta, maxDelta)
     }
 
     private fun collided(): Boolean {
@@ -217,6 +225,9 @@ class GameWorld(
         private const val MAX_STEP_SEC = 0.05f
         private const val SPAWN_EVERY_SEC = 3.4f
         private const val FIRST_SPAWN_SEC = 0.8f
+
+        /** Fraction of the inner playfield the bird may cross in one second. */
+        internal const val MAX_VERTICAL_FRACTION_PER_SEC = 0.72f
     }
 }
 

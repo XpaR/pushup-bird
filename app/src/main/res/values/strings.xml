@@ -12,35 +12,31 @@
     <string name="permission_settings">Open settings</string>
 
     <string name="ready_kicker">An original pushup game</string>
-    <string name="ready_title">Halfway down is center</string>
-    <string name="ready_body">Hold the middle of a pushup, then set that height. Rise and the bird climbs. Drop and it falls. Thread the bars.</string>
-    <string name="travel_label">Head movement on screen</string>
-    <string name="travel_hint">Small if the phone is far. Large if it is close to your face.</string>
+    <string name="ready_title">Your head flies the bird</string>
+    <string name="ready_body">Prop the phone up and tap start. Drop into a pushup and the bird drops. Push back up and it rises. Nothing to calibrate.</string>
+    <string name="travel_label">How sensitive</string>
+    <string name="travel_hint">Medium is the calm default. Small is livelier if the phone is far. Large is gentler if it is close.</string>
     <string name="travel_small">Small</string>
     <string name="travel_medium">Medium</string>
     <string name="travel_large">Large</string>
-    <string name="start">Set height and start</string>
+    <string name="start">Start</string>
     <string name="privacy_foot">On-device face detection. Nothing is recorded.</string>
     <string name="best_none">No best yet</string>
     <string name="best_fmt">Best %1$d</string>
 
-    <string name="reset_height">Reset height</string>
     <string name="paused_title">Hold up</string>
-    <string name="pause_reset">Height reset. The bird is centered on your head right now.</string>
     <string name="pause_left">Paused while you were away. Resume when you are back in position.</string>
     <string name="pause_back">Paused. Resume to keep going, or go back again to leave.</string>
     <string name="resume">Resume</string>
-    <string name="set_again">Set height again</string>
 
     <string name="game_over_title">The set is over</string>
     <string name="game_over_body">A bar, the mat, or the ceiling caught you.</string>
     <string name="new_best">New best</string>
-    <string name="retry">Reset height and retry</string>
+    <string name="retry">Try again</string>
 
-    <string name="need_face">Need a clear view of your face first.</string>
     <string name="face_lost">Face lost. Bird is holding.</string>
     <string name="looking_for_face">Looking for your face.</string>
-    <string name="face_ready">Face seen. Set your height halfway down.</string>
+    <string name="face_ready">Face seen. The bird follows your head.</string>
     <string name="camera_missing">No usable front camera on this phone.</string>
     <string name="camera_failed">The camera did not start. Try again.</string>
     <string name="playfield">Pushup Bird playfield</string>

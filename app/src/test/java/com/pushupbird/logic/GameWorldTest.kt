@@ -19,19 +19,44 @@ class GameWorldTest {
     }
 
     @Test
-    fun fullDownHitsTheMatAndFullUpHitsTheCeiling() {
+    fun oneFrameCannotThrowTheBirdIntoTheMat() {
+        val world = world()
+        world.start()
+        world.nextSpawnIn = 10_000f
+        val before = world.birdY
+        val tick = world.update(0.05f, 1f)
+        assertFalse(tick.died)
+        assertEquals(RunState.PLAYING, world.state)
+        val span = world.matTop() - world.ceilingThickness
+        val maxStep = span * GameWorld.MAX_VERTICAL_FRACTION_PER_SEC * 0.05f
+        assertTrue(world.birdY - before <= maxStep + 0.01f)
+        assertTrue(world.birdY > before)
+    }
+
+    @Test
+    fun holdingTheExtremeStillReachesTheMatAndTheCeiling() {
         val down = world()
         down.start()
         down.nextSpawnIn = 10_000f
-        val diedDown = down.update(0.05f, 1f)
-        assertTrue(diedDown.died)
+        var diedDown = false
+        repeat(80) {
+            if (down.state == RunState.PLAYING) {
+                diedDown = down.update(0.05f, 1f).died || diedDown
+            }
+        }
+        assertTrue(diedDown)
         assertEquals(RunState.DEAD, down.state)
 
         val up = world()
         up.start()
         up.nextSpawnIn = 10_000f
-        val diedUp = up.update(0.05f, -1f)
-        assertTrue(diedUp.died)
+        var diedUp = false
+        repeat(80) {
+            if (up.state == RunState.PLAYING) {
+                diedUp = up.update(0.05f, -1f).died || diedUp
+            }
+        }
+        assertTrue(diedUp)
         assertEquals(RunState.DEAD, up.state)
     }
 
@@ -113,7 +138,11 @@ class GameWorldTest {
         world.nextSpawnIn = 10_000f
         world.pipes.clear()
         world.pipes.add(Pipe(x = 80f, width = 90f, gapCenterY = 1000f, gapHeight = 200f))
-        world.update(0.05f, 1f)
+        var steps = 0
+        while (world.state == RunState.PLAYING && steps < 80) {
+            world.update(0.05f, 1f)
+            steps++
+        }
         assertEquals(RunState.DEAD, world.state)
         val frozenX = world.pipes.first().x
         val lowY = world.birdY

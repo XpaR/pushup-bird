@@ -22,7 +22,7 @@ class GameView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     var world: GameWorld? = null
-    var control: () -> Float? = { null }
+    var headFraction: () -> Float? = { null }
     var onTick: ((Tick) -> Unit)? = null
     var banner: String? = null
 
@@ -86,7 +86,7 @@ class GameView @JvmOverloads constructor(
         val dt = if (lastFrame == 0L) 0f else (frameTimeNanos - lastFrame) / 1_000_000_000f
         lastFrame = frameTimeNanos
         animSeconds += dt.coerceAtLeast(0f)
-        val tick = world.update(dt, control())
+        val tick = world.update(dt, headFraction())
         if (tick.scored) scorePunch = 1f
         if (tick.died) deathFlash = 1f
         updateTilt(world.birdY, dt)
@@ -121,7 +121,6 @@ class GameView @JvmOverloads constructor(
                 topInset = topInset,
                 density = resources.displayMetrics.density,
                 banner = banner,
-                centerLabel = resources.getString(R.string.center_line),
                 wordmark = resources.getString(R.string.wordmark),
             ),
         )

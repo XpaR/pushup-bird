@@ -2,7 +2,6 @@ package com.pushupbird.ui
 
 import android.content.Context
 import android.graphics.Canvas
-import android.graphics.DashPathEffect
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
@@ -25,7 +24,6 @@ data class DrawFrame(
     val topInset: Float,
     val density: Float,
     val banner: String?,
-    val centerLabel: String,
     val wordmark: String,
 )
 
@@ -70,10 +68,6 @@ class GameRenderer(context: Context) {
         typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
     }
     private val bannerBg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xE614181F.toInt() }
-    private val guidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xCCE0A24A.toInt()
-        style = Paint.Style.STROKE
-    }
     private val scrim = Paint(Paint.ANTI_ALIAS_FLAG)
     private val rect = RectF()
     private val path = Path()
@@ -95,9 +89,6 @@ class GameRenderer(context: Context) {
         }
         drawCeiling(canvas, width, world.ceilingThickness)
         drawMat(canvas, width, height, world.floorThickness, frame.wordmark, frame.density)
-        if (world.state == RunState.READY || world.state == RunState.PAUSED) {
-            drawGuide(canvas, world, frame.centerLabel, frame.density)
-        }
         drawBird(canvas, world, frame.tiltDegrees, frame.seconds)
         if (world.state != RunState.READY) {
             drawScore(canvas, world, frame)
@@ -192,20 +183,6 @@ class GameRenderer(context: Context) {
         canvas.drawText(wordmark, width / 2f, height - thickness * 0.38f, labelPaint)
         labelPaint.letterSpacing = 0f
         labelPaint.alpha = 255
-    }
-
-    private fun drawGuide(canvas: Canvas, world: GameWorld, label: String, density: Float) {
-        val y = world.centerY()
-        guidePaint.strokeWidth = 2f * density
-        guidePaint.pathEffect = DashPathEffect(floatArrayOf(10f * density, 8f * density), 0f)
-        val inset = 28f * density
-        canvas.drawLine(inset, y, world.width - inset, y, guidePaint)
-        guidePaint.pathEffect = null
-        labelPaint.color = brass
-        labelPaint.textSize = 11f * density
-        labelPaint.letterSpacing = 0.14f
-        canvas.drawText(label, world.width / 2f, y - 10f * density, labelPaint)
-        labelPaint.letterSpacing = 0f
     }
 
     private fun drawBird(canvas: Canvas, world: GameWorld, tilt: Float, seconds: Float) {

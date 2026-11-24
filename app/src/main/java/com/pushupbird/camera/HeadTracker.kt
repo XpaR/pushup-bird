@@ -14,12 +14,19 @@ import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.camera.view.transform.CoordinateTransform
+import androidx.camera.view.transform.ImageProxyTransformFactory
+import androidx.camera.view.transform.OutputTransform
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
+import com.pushupbird.logic.FaceCandidate
+import com.pushupbird.logic.fillCenterNormY
+import com.pushupbird.logic.pickFaceScreenY
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
@@ -32,9 +39,10 @@ enum class TrackerError {
 /**
  * Front camera plus on-device face detection.
  *
- * Reports the largest face's vertical center as a fraction of the upright
- * frame: 0 is the top, 1 is the bottom. Horizontal mirroring of the preview
- * does not affect this, because a pushup moves the head up and down.
+ * Reports the chosen face's vertical center as a fraction of the **preview**,
+ * 0 at the top of the screen and 1 at the bottom. The mapping uses the same
+ * rotation and FILL_CENTER crop as [PreviewView], so the fraction is the line
+ * the player sees their head on.
  */
 class HeadTracker(
     private val context: Context,
@@ -52,6 +60,7 @@ class HeadTracker(
     private var detector: FaceDetector? = null
     private var running = false
     private var rotationListener = false
+    private var lastScreenY: Float? = null
 
     private val onLayout = android.view.View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
         val next = previewView.display?.rotation ?: return@OnLayoutChangeListener
@@ -105,6 +114,7 @@ class HeadTracker(
         }
         preview = null
         analysis = null
+        lastScreenY = null
     }
 
     fun release() {
@@ -175,20 +185,34 @@ class HeadTracker(
         }
         val generation = session.get()
         val rotation = imageProxy.imageInfo.rotationDegrees
-        // ML Kit returns boxes in the upright frame, so a 90/270 buffer swaps axes.
-        val uprightHeight = (if (rotation % 180 == 0) imageProxy.height else imageProxy.width)
-            .coerceAtLeast(1)
+        val uprightWidth = (if (rotation % 180 == 0) imageProxy.width else imageProxy.height).toFloat()
+        val uprightHeight = (if (rotation % 180 == 0) imageProxy.height else imageProxy.width).toFloat()
+        val viewTransform = previewView.outputTransform
+        val viewWidth = previewView.width
+        val viewHeight = previewView.height
         val input = InputImage.fromMediaImage(mediaImage, rotation)
         try {
             faceDetector.process(input)
                 .addOnSuccessListener(executor) { faces ->
-                    val face = faces.maxByOrNull { found ->
-                        found.boundingBox.width() * found.boundingBox.height()
-                    } ?: return@addOnSuccessListener
-                    val normY = (face.boundingBox.exactCenterY() / uprightHeight.toFloat())
-                        .coerceIn(0f, 1f)
+                    if (faces.isEmpty() || viewHeight <= 0) return@addOnSuccessListener
+                    val candidates = faces.map { face ->
+                        FaceCandidate(
+                            screenY = faceScreenY(
+                                face,
+                                imageProxy,
+                                viewTransform,
+                                uprightWidth,
+                                uprightHeight,
+                                viewWidth,
+                                viewHeight,
+                            ),
+                            area = face.boundingBox.width() * face.boundingBox.height(),
+                        )
+                    }
+                    val screenY = pickFaceScreenY(candidates, lastScreenY) ?: return@addOnSuccessListener
+                    lastScreenY = screenY
                     mainHandler.post {
-                        if (generation == session.get()) onFaceY(normY)
+                        if (generation == session.get()) onFaceY(screenY)
                     }
                 }
                 .addOnFailureListener(executor) { error ->
@@ -203,12 +227,43 @@ class HeadTracker(
         }
     }
 
+    private fun faceScreenY(
+        face: Face,
+        imageProxy: ImageProxy,
+        viewTransform: OutputTransform?,
+        uprightWidth: Float,
+        uprightHeight: Float,
+        viewWidth: Int,
+        viewHeight: Int,
+    ): Float {
+        val imageX = face.boundingBox.exactCenterX()
+        val imageY = face.boundingBox.exactCenterY()
+        if (viewTransform != null) {
+            try {
+                val factory = ImageProxyTransformFactory().apply { isUsingRotationDegrees = true }
+                val source = factory.getOutputTransform(imageProxy)
+                val point = floatArrayOf(imageX, imageY)
+                CoordinateTransform(source, viewTransform).mapPoints(point)
+                return (point[1] / viewHeight.toFloat()).coerceIn(0f, 1f)
+            } catch (error: RuntimeException) {
+                Log.w(TAG, "Preview transform failed; using FILL_CENTER math", error)
+            }
+        }
+        return fillCenterNormY(
+            imageY,
+            uprightWidth,
+            uprightHeight,
+            viewWidth.toFloat(),
+            viewHeight.toFloat(),
+        )
+    }
+
     private fun analysisResolution(): ResolutionSelector {
         return ResolutionSelector.Builder()
-            .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
+            .setAspectRatioStrategy(AspectRatioStrategy.RATIO_16_9_FALLBACK_AUTO_STRATEGY)
             .setResolutionStrategy(
                 ResolutionStrategy(
-                    Size(640, 480),
+                    Size(1280, 720),
                     ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER,
                 ),
             )

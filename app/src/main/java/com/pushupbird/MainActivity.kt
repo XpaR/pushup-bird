@@ -20,7 +20,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.isVisible
-import com.google.android.material.button.MaterialButtonToggleGroup
 import com.pushupbird.camera.HeadTracker
 import com.pushupbird.camera.TrackerError
 import com.pushupbird.databinding.ActivityMainBinding
@@ -28,7 +27,6 @@ import com.pushupbird.logic.GameWorld
 import com.pushupbird.logic.HeadSignal
 import com.pushupbird.logic.RunState
 import com.pushupbird.logic.Tick
-import kotlin.math.abs
 
 /**
  * Pushup Bird. The front camera is the controller: head height maps to the
@@ -47,7 +45,6 @@ class MainActivity : AppCompatActivity() {
     private var stickyError: String? = null
     private var pauseMessage: String = ""
     private var newBestThisRun = false
-    private var syncingTravel = false
 
     private val requestCamera = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -81,7 +78,7 @@ class MainActivity : AppCompatActivity() {
         prepareWindow()
 
         settings = GameSettings(this)
-        signal = HeadSignal(initialHalfRange = settings.halfRange)
+        signal = HeadSignal()
         world = GameWorld()
         binding.preview.scaleType = PreviewView.ScaleType.FILL_CENTER
         // TextureView, so the transparent game canvas composites over the preview.
@@ -107,7 +104,7 @@ class MainActivity : AppCompatActivity() {
         )
 
         binding.game.world = world
-        binding.game.control = { signal.control() }
+        binding.game.headFraction = { signal.screenY }
         binding.game.onTick = ::onTick
 
         binding.enableCameraButton.setOnClickListener { onEnableCamera() }
@@ -115,9 +112,6 @@ class MainActivity : AppCompatActivity() {
         binding.startButton.setOnClickListener { onStartClicked() }
         binding.retryButton.setOnClickListener { onRetryClicked() }
         binding.resumeButton.setOnClickListener { onResumeClicked() }
-        wireTravel(binding.travelToggle)
-        wireTravel(binding.overTravelToggle)
-        syncTravel(signal.halfRange)
 
         try {
             tone = ToneGenerator(AudioManager.STREAM_MUSIC, 70)
@@ -270,44 +264,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             getString(R.string.best_fmt, settings.best)
         }
-    }
-
-    private fun wireTravel(group: MaterialButtonToggleGroup) {
-        group.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (!isChecked || syncingTravel) return@addOnButtonCheckedListener
-            val range = rangeFor(checkedId) ?: return@addOnButtonCheckedListener
-            signal.halfRange = range
-            settings.halfRange = range
-            syncTravel(range)
-        }
-    }
-
-    private fun syncTravel(range: Float) {
-        syncingTravel = true
-        binding.travelToggle.check(travelButton(binding.travelToggle, range))
-        binding.overTravelToggle.check(travelButton(binding.overTravelToggle, range))
-        syncingTravel = false
-    }
-
-    private fun rangeFor(id: Int): Float? = when (id) {
-        R.id.travel_small, R.id.over_travel_small -> HeadSignal.SMALL_RANGE
-        R.id.travel_medium, R.id.over_travel_medium -> HeadSignal.MEDIUM_RANGE
-        R.id.travel_large, R.id.over_travel_large -> HeadSignal.LARGE_RANGE
-        else -> null
-    }
-
-    private fun travelButton(group: MaterialButtonToggleGroup, range: Float): Int {
-        val small = abs(range - HeadSignal.SMALL_RANGE)
-        val medium = abs(range - HeadSignal.MEDIUM_RANGE)
-        val large = abs(range - HeadSignal.LARGE_RANGE)
-        val index = when {
-            small < medium && small <= large -> 0
-            large < medium -> 2
-            else -> 1
-        }
-        val readyIds = intArrayOf(R.id.travel_small, R.id.travel_medium, R.id.travel_large)
-        val overIds = intArrayOf(R.id.over_travel_small, R.id.over_travel_medium, R.id.over_travel_large)
-        return if (group.id == R.id.travel_toggle) readyIds[index] else overIds[index]
     }
 
     private fun showPermissionRationale() {

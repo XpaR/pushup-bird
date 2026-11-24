@@ -9,55 +9,62 @@ import org.junit.Test
 class GameWorldTest {
 
     @Test
-    fun holdingTheMiddleDoesNotDieImmediately() {
-        val world = world()
-        assertTrue(world.start())
-        val tick = world.update(0.05f, 0f)
-        assertEquals(RunState.PLAYING, world.state)
-        assertFalse(tick.died)
-        assertEquals(0, world.score)
-    }
-
-    @Test
-    fun oneFrameCannotThrowTheBirdIntoTheMat() {
+    fun theBirdSitsOnTheHeadLine() {
         val world = world()
         world.start()
         world.nextSpawnIn = 10_000f
-        val before = world.birdY
-        val tick = world.update(0.05f, 1f)
-        assertFalse(tick.died)
+        world.update(0.016f, 0.35f)
+        assertEquals(0.35f * world.height, world.birdY, 0.01f)
+        world.update(0.016f, 0.75f)
+        assertEquals(0.75f * world.height, world.birdY, 0.01f)
         assertEquals(RunState.PLAYING, world.state)
-        val span = world.matTop() - world.ceilingThickness
-        val maxStep = span * GameWorld.MAX_VERTICAL_FRACTION_PER_SEC * 0.05f
-        assertTrue(world.birdY - before <= maxStep + 0.01f)
-        assertTrue(world.birdY > before)
     }
 
     @Test
-    fun holdingTheExtremeStillReachesTheMatAndTheCeiling() {
+    fun aMissingFaceHoldsTheBirdExactly() {
+        val world = world()
+        world.start()
+        world.nextSpawnIn = 10_000f
+        world.update(0.016f, 0.62f)
+        val held = world.birdY
+        repeat(20) { world.update(0.05f, null) }
+        assertEquals(held, world.birdY, 0.01f)
+        assertEquals(RunState.PLAYING, world.state)
+    }
+
+    @Test
+    fun theSameHeadLineDoesNotDrift() {
+        val world = world()
+        world.start()
+        world.nextSpawnIn = 10_000f
+        repeat(40) { world.update(0.05f, 0.48f) }
+        assertEquals(0.48f * world.height, world.birdY, 0.01f)
+        assertEquals(RunState.PLAYING, world.state)
+    }
+
+    @Test
+    fun theHeadOnTheMatOrCeilingEndsTheSetImmediately() {
         val down = world()
         down.start()
         down.nextSpawnIn = 10_000f
-        var diedDown = false
-        repeat(80) {
-            if (down.state == RunState.PLAYING) {
-                diedDown = down.update(0.05f, 1f).died || diedDown
-            }
-        }
-        assertTrue(diedDown)
+        assertTrue(down.update(0.05f, 0.98f).died)
         assertEquals(RunState.DEAD, down.state)
 
         val up = world()
         up.start()
         up.nextSpawnIn = 10_000f
-        var diedUp = false
-        repeat(80) {
-            if (up.state == RunState.PLAYING) {
-                diedUp = up.update(0.05f, -1f).died || diedUp
-            }
-        }
-        assertTrue(diedUp)
+        assertTrue(up.update(0.05f, 0.02f).died)
         assertEquals(RunState.DEAD, up.state)
+    }
+
+    @Test
+    fun holdingTheMiddleDoesNotDieImmediately() {
+        val world = world()
+        assertTrue(world.start())
+        val tick = world.update(0.05f, 0.5f)
+        assertEquals(RunState.PLAYING, world.state)
+        assertFalse(tick.died)
+        assertEquals(0, world.score)
     }
 
     @Test
@@ -65,7 +72,7 @@ class GameWorldTest {
         val world = world()
         world.start()
         world.nextSpawnIn = 10_000f
-        world.update(0.016f, 0f)
+        world.update(0.016f, 0.5f)
         world.pipes.clear()
         world.pipes.add(
             Pipe(
@@ -78,13 +85,13 @@ class GameWorldTest {
 
         var steps = 0
         while (world.score == 0 && world.state == RunState.PLAYING && steps < 400) {
-            world.update(0.05f, 0f)
+            world.update(0.05f, 0.5f)
             steps++
         }
         assertEquals(RunState.PLAYING, world.state)
         assertEquals(1, world.score)
 
-        repeat(12) { world.update(0.05f, 0f) }
+        repeat(12) { world.update(0.05f, 0.5f) }
         assertEquals(1, world.score)
         assertEquals(RunState.PLAYING, world.state)
     }
@@ -94,7 +101,7 @@ class GameWorldTest {
         val world = world()
         world.start()
         world.nextSpawnIn = 10_000f
-        world.update(0.016f, 0f)
+        world.update(0.016f, 0.5f)
         world.pipes.clear()
         world.pipes.add(
             Pipe(
@@ -104,7 +111,7 @@ class GameWorldTest {
                 gapHeight = world.gapHeight,
             ),
         )
-        val tick = world.update(0.016f, 0f)
+        val tick = world.update(0.016f, 0.5f)
         assertTrue(tick.died)
         assertEquals(0, world.score)
     }
@@ -114,7 +121,7 @@ class GameWorldTest {
         val world = world()
         world.start()
         world.nextSpawnIn = 10_000f
-        world.update(0.016f, 0f)
+        world.update(0.016f, 0.5f)
         world.pipes.clear()
         val startX = world.birdX + 400f
         world.pipes.add(
@@ -125,7 +132,7 @@ class GameWorldTest {
                 gapHeight = world.gapHeight,
             ),
         )
-        world.update(10f, 0f)
+        world.update(10f, 0.5f)
         assertEquals(RunState.PLAYING, world.state)
         val moved = startX - world.pipes.first().x
         assertTrue(moved < 40f)
@@ -138,15 +145,14 @@ class GameWorldTest {
         world.nextSpawnIn = 10_000f
         world.pipes.clear()
         world.pipes.add(Pipe(x = 80f, width = 90f, gapCenterY = 1000f, gapHeight = 200f))
-        var steps = 0
-        while (world.state == RunState.PLAYING && steps < 80) {
-            world.update(0.05f, 1f)
-            steps++
-        }
+        world.update(0.05f, 0.98f)
         assertEquals(RunState.DEAD, world.state)
         val frozenX = world.pipes.first().x
         val lowY = world.birdY
-        world.update(0.05f, 0f)
+        world.update(0.05f, null)
+        assertEquals(frozenX, world.pipes.first().x, 0.01f)
+        assertEquals(lowY, world.birdY, 0.01f)
+        world.update(0.05f, 0.40f)
         assertEquals(frozenX, world.pipes.first().x, 0.01f)
         assertTrue(world.birdY < lowY)
     }
@@ -169,7 +175,7 @@ class GameWorldTest {
         val world = GameWorld(Random(3))
         world.resize(1080f, 1920f)
         world.start()
-        repeat(500) { world.update(0.05f, 0f) }
+        repeat(500) { world.update(0.05f, 0.5f) }
         assertTrue(world.pipes.size < 8)
     }
 

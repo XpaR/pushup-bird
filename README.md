@@ -14,15 +14,12 @@ Full camera play needs a physical phone. An emulator usually cannot see you do a
 
 1. Prop the phone in **portrait**, about head height, with the front camera seeing your face at the top and the bottom of a pushup. More light helps.
 2. Allow the camera when asked. The preview is the background of the game.
-3. Tap **Start**. There is no height setup. The bird follows your head immediately.
-4. Rise to climb. Drop to fall. Slip through the bars.
-5. **How sensitive** is optional:
-   - **Medium** — the calm default. A normal pushup covers the playfield.
-   - **Small** — livelier, for when the phone is far and your head barely moves in the frame.
-   - **Large** — gentler, for when the phone is close and your head sweeps the frame.
+3. Tap **Start**. The bird sits on the same horizontal line as your head in the camera preview. There is no sensitivity setting and no height setup.
+4. Lower into a pushup and the bird goes down with your head. Push back up and it comes back up. It does not jump, drift, or fall on its own.
+5. If the camera loses your face for a moment, the bird holds still on the last line until it sees you again.
 6. After a game over, tap **Try again**.
 
-Go back once during a set to pause. Go back again to leave. The bird keeps following your head while the bars are held.
+Go back once during a set to pause. Go back again to leave.
 
 ## Build
 
@@ -59,8 +56,10 @@ The face model is the bundled ML Kit face detector, so the game works offline. T
 
 `./gradlew testDebugUnitTest` covers the parts that do not need a camera:
 
-- head-height smoothing, spike limiting, slow baseline, and the up/down mapping
-- a speed limit so one frame cannot throw the bird across the screen
+- 1:1 mapping from the head's place on screen to the bird
+- holding that line when the face is missing, with no drift and no drop
+- a 3-sample median that ignores a one-frame spike, then an ease that does not overshoot
+- the FILL_CENTER crop from the camera image into the preview
 - scoring a cleared gap once
 - dying on a bar, the mat, or the ceiling
 - a stalled frame not skipping the bird through a bar
@@ -69,13 +68,15 @@ Camera, preview, and permission UI need a real device.
 
 ## How the bird follows you
 
-The analyzer reads the largest face box from the front camera. Its vertical center, in the upright frame, is a number from 0 (top) to 1 (bottom). A strong moving average and a per-sample step limit knock down jitter. The neutral pose is the middle of the frame, and that baseline only drifts toward your head very slowly, so there is nothing to calibrate. The selected range is how far your head must move to reach the ceiling or the mat. The bird also has a maximum vertical speed, so a single noisy frame cannot fling it across the playfield. A full pushup still reaches the top and the bottom.
+The analyzer reads faces from the front camera and maps each box through the same rotation and FILL_CENTER crop as the on-screen preview. The bird's vertical center is that screen line: a head 35% of the way down the preview puts the bird 35% of the way down the playfield.
+
+The first face is the largest one. After that, the tracker stays with the face nearest the line it was already following, so a second face or a one-frame false box does not steal the bird. A 3-sample median throws out a single glitch, and a short ease follows the median without velocity, so it cannot coast past the head or keep moving after the head stops. Missed frames are ignored. The bird stays on the last line. There is no gravity, no baseline, and no sensitivity gain.
 
 ## Project map
 
 - `app/src/main/java/com/pushupbird/MainActivity.kt` — permission, start, score, pause
 - `app/src/main/java/com/pushupbird/camera/HeadTracker.kt` — CameraX preview and ML Kit face detection
-- `app/src/main/java/com/pushupbird/logic/HeadSignal.kt` — smoothing and the head-to-control mapping
+- `app/src/main/java/com/pushupbird/logic/HeadSignal.kt` — median, ease, and preview crop math
 - `app/src/main/java/com/pushupbird/logic/GameWorld.kt` — bars, collision, scoring
 - `app/src/main/java/com/pushupbird/ui/GameView.kt` — frame loop
 - `app/src/main/java/com/pushupbird/ui/GameRenderer.kt` — bird, bars, mat, score

@@ -72,8 +72,8 @@ class GameWorld(
     internal val gapHeight: Float
         get() {
             val inner = (matTop() - ceilingThickness).coerceAtLeast(1f)
-            val wanted = inner * 0.36f
-            val maxGap = (inner - hitRadius() * 4f).coerceAtLeast(hitRadius() * 2f)
+            val wanted = inner * 0.42f
+            val maxGap = (inner - hitRadius() * 3f).coerceAtLeast(hitRadius() * 2f)
             return min(wanted, maxGap)
         }
 
@@ -104,12 +104,19 @@ class GameWorld(
         if (state == RunState.PAUSED) state = RunState.PLAYING
     }
 
-    fun update(dtRaw: Float, control: Float?): Tick {
+    /**
+     * [headFraction] is the head's vertical place on the preview, 0 at the top
+     * and 1 at the bottom. Null means the face was not seen this frame: the
+     * bird stays exactly where it is. Nothing else moves it.
+     */
+    fun update(dtRaw: Float, headFraction: Float?): Tick {
         if (width < 2f || height < 2f) {
             return Tick(scored = false, died = false, state = state, score = score)
         }
         val dt = dtRaw.coerceIn(0f, MAX_STEP_SEC)
-        applyControl(control, dt)
+        if (headFraction != null) {
+            birdY = headFraction.coerceIn(0f, 1f) * height
+        }
         if (state != RunState.PLAYING) {
             return Tick(scored = false, died = false, state = state, score = score)
         }
@@ -145,8 +152,8 @@ class GameWorld(
     }
 
     internal fun speedPxPerSec(): Float {
-        val ramp = 1f + (score * 0.035f).coerceAtMost(0.4f)
-        return width * 0.205f * ramp
+        val ramp = 1f + (score * 0.03f).coerceAtMost(0.35f)
+        return width * 0.16f * ramp
     }
 
     internal fun sampleGapCenter(): Float {
@@ -172,20 +179,6 @@ class GameWorld(
                 gapHeight = gapHeight,
             ),
         )
-    }
-
-    /**
-     * ±1 reaches the ceiling and the mat. The bird eases toward that target
-     * so one noisy frame cannot throw it across the playfield.
-     */
-    private fun applyControl(control: Float?, dt: Float) {
-        val value = control ?: return
-        val span = (matTop() - ceilingThickness).coerceAtLeast(1f)
-        val reach = span / 2f + birdRadius * HIT_SCALE * 0.2f
-        val target = centerY() + value.coerceIn(-1f, 1f) * reach
-        val maxDelta = span * MAX_VERTICAL_FRACTION_PER_SEC * dt
-        if (maxDelta <= 0f) return
-        birdY += (target - birdY).coerceIn(-maxDelta, maxDelta)
     }
 
     private fun collided(): Boolean {
@@ -223,11 +216,8 @@ class GameWorld(
         const val CAP_EXTRA_SCALE = 0.22f
         const val CAP_HEIGHT_SCALE = 0.34f
         private const val MAX_STEP_SEC = 0.05f
-        private const val SPAWN_EVERY_SEC = 3.4f
-        private const val FIRST_SPAWN_SEC = 0.8f
-
-        /** Fraction of the inner playfield the bird may cross in one second. */
-        internal const val MAX_VERTICAL_FRACTION_PER_SEC = 0.72f
+        private const val SPAWN_EVERY_SEC = 4.0f
+        private const val FIRST_SPAWN_SEC = 1.1f
     }
 }
 

@@ -2,7 +2,6 @@
 <resources>
     <string name="app_name">Pushup Bird</string>
     <string name="wordmark">PUSHUP BIRD</string>
-    <string name="center_line">CENTER</string>
 
     <string name="permission_title">The camera is the controller</string>
     <string name="permission_body">Pushup Bird watches your head with the front camera and moves the bird to match. Prop the phone in front of you and play by doing pushups.\n\nVideo stays on this phone. Nothing is recorded, saved, or uploaded.</string>
@@ -13,12 +12,7 @@
 
     <string name="ready_kicker">An original pushup game</string>
     <string name="ready_title">Your head flies the bird</string>
-    <string name="ready_body">Prop the phone up and tap start. Drop into a pushup and the bird drops. Push back up and it rises. Nothing to calibrate.</string>
-    <string name="travel_label">How sensitive</string>
-    <string name="travel_hint">Medium is the calm default. Small is livelier if the phone is far. Large is gentler if it is close.</string>
-    <string name="travel_small">Small</string>
-    <string name="travel_medium">Medium</string>
-    <string name="travel_large">Large</string>
+    <string name="ready_body">The bird sits on the same line as your head. Lower into a pushup and it goes with you. If the camera loses your face, the bird holds still. It never drops on its own.</string>
     <string name="start">Start</string>
     <string name="privacy_foot">On-device face detection. Nothing is recorded.</string>
     <string name="best_none">No best yet</string>
@@ -34,9 +28,9 @@
     <string name="new_best">New best</string>
     <string name="retry">Try again</string>
 
-    <string name="face_lost">Face lost. Bird is holding.</string>
+    <string name="face_lost">Face lost. Holding still.</string>
     <string name="looking_for_face">Looking for your face.</string>
-    <string name="face_ready">Face seen. The bird follows your head.</string>
+    <string name="face_ready">Face seen. The bird is on your head line.</string>
     <string name="camera_missing">No usable front camera on this phone.</string>
     <string name="camera_failed">The camera did not start. Try again.</string>
     <string name="playfield">Pushup Bird playfield</string>

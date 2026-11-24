@@ -1,73 +1,82 @@
 package com.pushupbird.logic
 
+import kotlin.math.abs
+
 /**
- * Turns a noisy face-box vertical position into a calm bird control.
+ * Follows the head's on-screen vertical fraction. 0 is the top of the preview,
+ * 1 is the bottom, and that number is where the bird is drawn.
  *
- * [normY] is 0 at the top of the upright camera frame and 1 at the bottom.
- * Lowering into a pushup increases [normY], the control value goes positive,
- * and the playfield maps that to a lower bird. Pushing back up does the reverse.
- *
- * There is no calibration tap. The neutral pose is the middle of the camera
- * frame, and that baseline drifts toward the head only very slowly, so a real
- * pushup still moves the bird while camera jitter does not.
- *
- * [halfRange] is how far the head must travel, as a fraction of the frame,
- * to send the bird from the center to the ceiling or the mat. Larger is calmer.
+ * A 3-sample median drops a single-frame glitch. The value then eases toward
+ * that median with no velocity, so it cannot overshoot or keep moving after
+ * the head has stopped. Missed frames are not samples: [screenY] simply stays
+ * where it was.
  */
 class HeadSignal(
-    private val alpha: Float = 0.15f,
-    initialHalfRange: Float = MEDIUM_RANGE,
-    private val maxStep: Float = 0.028f,
-    private val baselineAlpha: Float = 0.01f,
+    private val alpha: Float = 0.65f,
 ) {
-    var smoothed: Float? = null
-        private set
+    private val recent = ArrayDeque<Float>()
 
-    /** Frame position that maps to the vertical center of the playfield. */
-    var baseline: Float = FRAME_MID
+    var screenY: Float? = null
         private set
-
-    var halfRange: Float = initialHalfRange.coerceIn(MIN_RANGE, MAX_RANGE)
-        set(value) {
-            field = value.coerceIn(MIN_RANGE, MAX_RANGE)
-        }
 
     fun push(normY: Float) {
         val sample = normY.coerceIn(0f, 1f)
-        val previous = smoothed
-        val next = if (previous == null) {
-            sample
+        recent.addLast(sample)
+        while (recent.size > WINDOW) recent.removeFirst()
+        val median = median(recent)
+        val previous = screenY
+        screenY = if (previous == null) {
+            median
         } else {
-            val stepped = previous + (sample - previous).coerceIn(-maxStep, maxStep)
-            alpha * stepped + (1f - alpha) * previous
+            previous + alpha * (median - previous)
         }
-        smoothed = next
-        baseline += baselineAlpha * (next - baseline)
     }
 
-    /**
-     * -1 when the head is one full [halfRange] above the baseline (bird at the top),
-     * +1 when it is one full range below (bird at the bottom).
-     * Null until the first face sample arrives.
-     */
-    fun control(): Float? {
-        val current = smoothed ?: return null
-        return ((current - baseline) / halfRange).coerceIn(-1f, 1f)
+    private fun median(values: Collection<Float>): Float {
+        val sorted = values.sorted()
+        val mid = sorted.size / 2
+        return if (sorted.size % 2 == 1) {
+            sorted[mid]
+        } else {
+            (sorted[mid - 1] + sorted[mid]) / 2f
+        }
     }
 
     companion object {
-        const val FRAME_MID = 0.5f
-
-        /** Livelier. Use when the phone is far and the head barely moves in frame. */
-        const val SMALL_RANGE = 0.18f
-
-        /** Calm default. A real pushup still covers the playfield. */
-        const val MEDIUM_RANGE = 0.26f
-
-        /** Gentler. Use when the phone is close and the head sweeps the frame. */
-        const val LARGE_RANGE = 0.36f
-
-        private const val MIN_RANGE = 0.12f
-        private const val MAX_RANGE = 0.5f
+        private const val WINDOW = 3
     }
+}
+
+/**
+ * FILL_CENTER mapping from an upright camera image into the preview.
+ * Y is unchanged by the front-camera mirror.
+ *
+ * Returns the point's vertical fraction of the view, 0 at the top.
+ */
+fun fillCenterNormY(
+    imageY: Float,
+    imageWidth: Float,
+    imageHeight: Float,
+    viewWidth: Float,
+    viewHeight: Float,
+): Float {
+    if (imageWidth <= 0f || imageHeight <= 0f || viewWidth <= 0f || viewHeight <= 0f) {
+        return 0.5f
+    }
+    val scale = maxOf(viewWidth / imageWidth, viewHeight / imageHeight)
+    val offsetY = (imageHeight * scale - viewHeight) / 2f
+    val viewY = imageY * scale - offsetY
+    return (viewY / viewHeight).coerceIn(0f, 1f)
+}
+
+data class FaceCandidate(
+    val screenY: Float,
+    val area: Int,
+)
+
+/** Largest face until one is being followed, then the face nearest that line. */
+fun pickFaceScreenY(faces: List<FaceCandidate>, lastScreenY: Float?): Float? {
+    if (faces.isEmpty()) return null
+    if (lastScreenY == null) return faces.maxBy { it.area }.screenY
+    return faces.minBy { abs(it.screenY - lastScreenY) }.screenY
 }
